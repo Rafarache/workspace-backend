@@ -1,12 +1,21 @@
-from rest_framework import generics, permissions, authentication
+# Rest framework
+from rest_framework import generics, permissions, authentication, status
 from rest_framework.response import Response
-from knox.models import AuthToken
-from .serializers import UserSerializer, RegisterSerializer
-
 from rest_framework.views import APIView
-from knox.auth import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.authtoken.serializers import AuthTokenSerializer
 
+# Django
+from django.contrib.auth.models import User
+from django.contrib.auth import login
+
+# Account
+from .serializers import UserSerializer, RegisterSerializer, ChangePasswordSerializer
+
+# Knox
+from knox.models import AuthToken
+from knox.auth import TokenAuthentication
+from knox.views import LoginView as KnoxLoginView
 
 # Register API
 class RegisterAPI(generics.GenericAPIView):
@@ -21,6 +30,7 @@ class RegisterAPI(generics.GenericAPIView):
         "token": AuthToken.objects.create(user)[1]
         })
 
+# Example of isAuthenticated
 class Home(APIView):
 
     authentication_classes = (TokenAuthentication,)
@@ -29,11 +39,7 @@ class Home(APIView):
     def get(self, request, format=None):
         return Response("vrau")
 
-from django.contrib.auth import login
-
-from rest_framework.authtoken.serializers import AuthTokenSerializer
-from knox.views import LoginView as KnoxLoginView
-
+# Login API
 class LoginAPI(KnoxLoginView):
     permission_classes = (permissions.AllowAny,)
 
@@ -43,3 +49,38 @@ class LoginAPI(KnoxLoginView):
         user = serializer.validated_data['user']
         login(request, user)
         return super(LoginAPI, self).post(request, format=None)
+
+# Chnage Password API
+class ChangePasswordView(generics.UpdateAPIView):
+    """
+    An endpoint for changing password.
+    """
+    serializer_class = ChangePasswordSerializer
+    model = User
+    permission_classes = (IsAuthenticated,)
+
+    def get_object(self, queryset=None):
+        obj = self.request.user
+        return obj
+
+    def update(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid():
+            # Check old password
+            if not self.object.check_password(serializer.data.get("old_password")):
+                return Response({"old_password": ["Wrong password."]}, status=status.HTTP_400_BAD_REQUEST)
+            # set_password also hashes the password that the user will get
+            self.object.set_password(serializer.data.get("new_password"))
+            self.object.save()
+            response = {
+                'status': 'success',
+                'code': status.HTTP_200_OK,
+                'message': 'Password updated successfully',
+                'data': []
+            }
+
+            return Response(response)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
