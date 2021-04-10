@@ -25,24 +25,14 @@ class RegisterAPI(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
           serializer.is_valid(raise_exception=True)
-          print("vrau")
           user = serializer.save()
           return Response({
           "user": UserSerializer(user, context=self.get_serializer_context()).data,
           "token": AuthToken.objects.create(user)[1],
-          "message": "Registration completed"
           })
         else:
-          return Response({"messages": serializer.errors})
-
-# Example of isAuthenticated
-class Home(APIView):
-
-    authentication_classes = (TokenAuthentication,)
-    permission_classes = (IsAuthenticated,)
-
-    def get(self, request, format=None):
-        return Response("vrau")
+          return Response({"error": serializer.errors})
+  
 
 # Login API
 class LoginAPI(KnoxLoginView):
@@ -56,7 +46,7 @@ class LoginAPI(KnoxLoginView):
           login(request, user)
           return super(LoginAPI, self).post(request, format=None)
         else:
-          message = {"message": "Username or password invalid"}
+          message = {"error": "Username or password invalid"}
           return Response(message)
 
 # Chnage Password API
