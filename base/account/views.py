@@ -8,6 +8,8 @@ from rest_framework.authtoken.serializers import AuthTokenSerializer
 # Django
 from django.contrib.auth.models import User
 from django.contrib.auth import login
+from rest_framework.authtoken.models import Token
+
 
 # Account
 from .serializers import UserSerializer, RegisterSerializer, ChangePasswordSerializer
@@ -32,7 +34,20 @@ class RegisterAPI(generics.GenericAPIView):
           })
         else:
           return Response({"error": serializer.errors})
+
   
+# User info
+class UserInfoAPI(generics.GenericAPIView):
+
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    model = User
+
+    def get(self, request, *args, **kwargs):
+      user = request.user
+      serializer = UserSerializer(user)
+      return Response(serializer.data)
+
 
 # Login API
 class LoginAPI(KnoxLoginView):
