@@ -16,9 +16,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
+## URLs
 from account import urls as account_urls
+from room_info import urls as room_info_urls
 
 urlpatterns = [
   path('api/', include(account_urls)),
+  path('api/', include(room_info_urls)),
+
   path('admin/', admin.site.urls),
 ]
